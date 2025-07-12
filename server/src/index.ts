@@ -1,21 +1,19 @@
 // src/index.ts
-import "reflect-metadata";
 import express from 'express';
-import { createConnection } from "typeorm";
+import authRouter from './routes/auth';
+import usersRouter from './routes/users'; // Import the new users router
 
 const main = async () => {
-  const app = express();
-  app.use(express.json()); // Middleware to parse JSON bodies
+    // ... (database connection code)
 
-  // Database connection (we will configure this later)
-  // await createConnection(); 
+    const app = express();
+    app.use(express.json());
 
-  const PORT = process.env.PORT || 4000;
-  app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-  });
+    // --- API Routes ---
+    app.use('/api/auth', authRouter); // For login, password reset, etc.
+    app.use('/api/users', usersRouter);  // For creating/managing users
+
+    // ... (listen code)
 };
 
-main().catch(err => {
-  console.error(err);
-});
+main();
