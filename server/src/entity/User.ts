@@ -37,4 +37,10 @@ export class User {
 
     @UpdateDateColumn()
     updatedAt!: Date;
+
+     @Column({ type: "varchar", nullable: true, select: false }) // select: false prevents it from being returned by default
+    passwordResetToken?: string;
+
+    @Column({ type: "timestamp", nullable: true })
+    passwordResetExpires?: Date;
 }
