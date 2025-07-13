@@ -1,22 +1,23 @@
 // src/app/layout.tsx
-import StyledComponentsRegistry from '@/lib/registry' // Import the registry
-import type { Metadata } from "next";
+import { Inter } from 'next/font/google';
+import { Providers } from './providers';
 
-export const metadata: Metadata = {
+const inter = Inter({ subsets: ['latin'] });
+
+export const metadata = {
   title: "Financial Manager Platform",
-  description: "Built with styled-components",
+  description: "FMP for kLab",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.className}>
       <body>
-        {/* Wrap your children with the registry */}
-        <StyledComponentsRegistry>{children}</StyledComponentsRegistry>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
