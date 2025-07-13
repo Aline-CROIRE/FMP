@@ -33,3 +33,15 @@ export const authorizeAdmin = (req: AuthRequest, res: Response, next: NextFuncti
         res.status(403).json({ message: 'User is not authorized as an admin.' });
     }
 };
+
+
+
+// --- NEW: Middleware to authorize Program Managers ---
+export const authorizeProgramManager = (req: AuthRequest, res: Response, next: NextFunction) => {
+    // Allows access if the user is either a Program Manager OR an Admin (since Admins can do anything)
+    if (req.user && (req.user.role === UserRole.PROGRAM_MANAGER || req.user.role === UserRole.ADMIN)) {
+        next();
+    } else {
+        res.status(403).json({ message: 'Not authorized as a Program Manager.' });
+    }
+};

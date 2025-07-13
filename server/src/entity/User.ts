@@ -1,46 +1,58 @@
-// src/entity/User.ts
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToMany,
+} from "typeorm";
+import { Budget } from "./Budget";
 
-// We define an "enum" for the user roles to prevent typos
+// Define user roles using enum
 export enum UserRole {
-    ADMIN = "admin",
-    PROGRAM_MANAGER = "program_manager",
-    FINANCE_MANAGER = "finance_manager"
+  ADMIN = "admin",
+  PROGRAM_MANAGER = "program_manager",
+  FINANCE_MANAGER = "finance_manager",
 }
 
 @Entity("users") // Explicitly name the table "users"
 export class User {
-    @PrimaryGeneratedColumn("uuid") // A unique ID like "a1b2c3d4-..."
-    id!: string;
+  @PrimaryGeneratedColumn("uuid") // Generates unique user IDs
+  id!: string;
 
-    @Column({ type: "varchar", length: 255 })
-    name!: string;
+  @Column({ type: "varchar", length: 255 })
+  name!: string;
 
-    @Column({ type: "varchar", length: 255, unique: true })
-    email!: string;
+  @Column({ type: "varchar", length: 255, unique: true })
+  email!: string;
 
-    @Column({ type: "varchar" })
-    passwordHash!: string; // We will never store plain text passwords
+  @Column({ type: "varchar" })
+  passwordHash!: string; // Store only hashed passwords
 
-    @Column({
-        type: "enum",
-        enum: UserRole,
-        default: UserRole.FINANCE_MANAGER
-    })
-    role!: UserRole;
+  @Column({
+    type: "enum",
+    enum: UserRole,
+    default: UserRole.FINANCE_MANAGER,
+  })
+  role!: UserRole;
 
-    @Column({ default: false })
-    isEmailVerified!: boolean;
+  @Column({ default: false })
+  isEmailVerified!: boolean;
 
-    @CreateDateColumn()
-    createdAt!: Date;
+  @CreateDateColumn()
+  createdAt!: Date;
 
-    @UpdateDateColumn()
-    updatedAt!: Date;
+  @UpdateDateColumn()
+  updatedAt!: Date;
 
-     @Column({ type: "varchar", nullable: true, select: false }) // select: false prevents it from being returned by default
-    passwordResetToken?: string;
+  // Optional fields for password reset feature
+  @Column({ type: "varchar", nullable: true, select: false })
+  passwordResetToken?: string;
 
-    @Column({ type: "timestamp", nullable: true })
-    passwordResetExpires?: Date;
+  @Column({ type: "timestamp", nullable: true })
+  passwordResetExpires?: Date;
+
+  // 👇 This fixes the "user.budgets" error in Budget.ts
+  @OneToMany(() => Budget, (budget) => budget.createdBy)
+  budgets!: Budget[];
 }
