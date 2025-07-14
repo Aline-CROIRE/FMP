@@ -1,3 +1,4 @@
+// src/entity/Budget.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -16,7 +17,7 @@ export enum BudgetStatus {
   PENDING_APPROVAL = "pending_approval",
   APPROVED = "approved",
   REJECTED = "rejected",
-  CHANGES_REQUESTED = "changes_requested", // New status
+  CHANGES_REQUESTED = "changes_requested", 
 }
 
 @Entity("budgets")
@@ -50,9 +51,9 @@ export class Budget {
   createdAt!: Date;
 
   @UpdateDateColumn()
-  updatedAt?: Date;
+  updatedAt!: Date;
 
-  // 👤 User who created the budget (nullable for now to avoid sync errors)
+
   @ManyToOne(() => User, (user) => user.budgets, { nullable: true })
   @JoinColumn({ name: "userId" })
   createdBy?: User;
@@ -60,7 +61,7 @@ export class Budget {
   @Column({ type: "uuid", nullable: true })
   userId?: string;
 
-  // 📦 Related categories (items inside each category)
+
   @OneToMany(() => Category, (category) => category.budget, {
     cascade: true,
     eager: true,

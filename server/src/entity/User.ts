@@ -1,3 +1,4 @@
+// src/entity/User.ts
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -8,26 +9,27 @@ import {
 } from "typeorm";
 import { Budget } from "./Budget";
 
-// Define user roles using enum
 export enum UserRole {
   ADMIN = "admin",
   PROGRAM_MANAGER = "program_manager",
   FINANCE_MANAGER = "finance_manager",
+  VIEWER = "viewer", 
 }
 
-@Entity("users") // Explicitly name the table "users"
+@Entity("users")
 export class User {
-  @PrimaryGeneratedColumn("uuid") // Generates unique user IDs
+  @PrimaryGeneratedColumn("uuid")
   id!: string;
 
-  @Column({ type: "varchar", length: 255 })
-  name!: string;
+ @Column({ default: 'Unknown' })
+name!: string;
 
-  @Column({ type: "varchar", length: 255, unique: true })
+
+ @Column({ default: 'Unknown' })
   email!: string;
 
-  @Column({ type: "varchar" })
-  passwordHash!: string; // Store only hashed passwords
+  @Column()
+  passwordHash!: string;
 
   @Column({
     type: "enum",
@@ -36,8 +38,11 @@ export class User {
   })
   role!: UserRole;
 
-  @Column({ default: false })
-  isEmailVerified!: boolean;
+  @Column({ type: "varchar", nullable: true, select: false })
+  passwordResetToken?: string;
+
+  @Column({ type: "timestamp", nullable: true })
+  passwordResetExpires?: Date;
 
   @CreateDateColumn()
   createdAt!: Date;
@@ -45,14 +50,8 @@ export class User {
   @UpdateDateColumn()
   updatedAt!: Date;
 
-  // Optional fields for password reset feature
-  @Column({ type: "varchar", nullable: true, select: false })
-  passwordResetToken?: string;
-
-  @Column({ type: "timestamp", nullable: true })
-  passwordResetExpires?: Date;
-
-  // 👇 This fixes the "user.budgets" error in Budget.ts
+  
   @OneToMany(() => Budget, (budget) => budget.createdBy)
+
   budgets!: Budget[];
 }
