@@ -2,23 +2,52 @@
 import { Router } from 'express';
 import { getRepository, getConnection } from 'typeorm';
 import { Budget, BudgetStatus } from '../entity/Budget';
-import { protect, authorizeProgramManager, authorizeAdmin } from '../middleware/authMiddleware';
+import { protect, authorizeProgramManager, authorizeAdmin, authorizeFinancialManager } from '../middleware/authMiddleware';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { Category } from '../entity/Category';
 import { Item } from '../entity/Item';
 import { UserRole } from '../entity/User';
 
 const router = Router();
-
-// This middleware protects all routes in this file, ensuring a user must be logged in.
+// This protects all routes in this file, ensuring a user must be logged in.
 router.use(protect);
+
+// @route   GET /api/budgets/summary
+// @desc    Get dashboard summary statistics
+// @access  Private (All authenticated users)
+router.get('/summary', async (req: AuthRequest, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Not authorized' });
+    try {
+        const budgetRepo = getRepository(Budget);
+        const totalApprovedAmountResult = await budgetRepo.createQueryBuilder("budget")
+            .select("SUM(budget.totalAmount)", "sum")
+            .where("budget.status = :status", { status: BudgetStatus.APPROVED })
+            .getRawOne();
+        const statusCountsResult = await budgetRepo.createQueryBuilder("budget")
+            .select("budget.status", "status")
+            .addSelect("COUNT(budget.id)", "count")
+            .groupBy("budget.status")
+            .getRawMany();
+        const summary = {
+            totalApprovedAmount: parseFloat(totalApprovedAmountResult.sum) || 0,
+            statusCounts: statusCountsResult.reduce((acc: any, item: any) => {
+                acc[item.status] = parseInt(item.count, 10);
+                return acc;
+            }, {}),
+            totalBudgets: await budgetRepo.count(),
+        };
+        res.json(summary);
+    } catch (error) {
+        console.error("Error fetching summary:", error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
 
 // @route   POST /api/budgets
 // @desc    Create a new budget
-router.post('/', async (req: AuthRequest, res) => {
-    if (!req.user) {
-        return res.status(401).json({ message: 'Not authorized' });
-    }
+// @access  Private (Financial Manager or Admin)
+router.post('/', authorizeFinancialManager, async (req: AuthRequest, res) => {
+    if (!req.user) return res.status(401).json({ message: 'Not authorized' });
 
     const { name, program, categories } = req.body;
     if (!name || !categories || !Array.isArray(categories)) {
@@ -49,8 +78,8 @@ router.post('/', async (req: AuthRequest, res) => {
             name,
             program,
             totalAmount,
-            userId: req.user.id, // Assign the ID of the logged-in user
-            status: BudgetStatus.PENDING_APPROVAL, // New budgets start as pending
+            userId: req.user.id,
+            status: BudgetStatus.PENDING_APPROVAL,
             categories: processedCategories,
         });
 
@@ -63,12 +92,13 @@ router.post('/', async (req: AuthRequest, res) => {
 });
 
 // @route   GET /api/budgets
-// @desc    Get all budgets
-router.get('/', async (req: AuthRequest, res) => {
+// @desc    Get all budgets for all users (for simplicity, can be scoped later)
+// @access  Private (All authenticated users)
+router.get('/', async (req, res) => {
     try {
         const budgets = await getRepository(Budget).find({
             order: { createdAt: 'DESC' },
-            relations: ['createdBy'] // Include basic info of the user who created it
+            relations: ['createdBy']
         });
         res.json(budgets);
     } catch (error) {
@@ -79,6 +109,7 @@ router.get('/', async (req: AuthRequest, res) => {
 
 // @route   GET /api/budgets/:id
 // @desc    Get a single budget by its ID
+// @access  Private (All authenticated users)
 router.get('/:id', async (req, res) => {
     try {
         const budget = await getRepository(Budget).findOne({
@@ -97,7 +128,8 @@ router.get('/:id', async (req, res) => {
 
 // @route   PUT /api/budgets/:id
 // @desc    Update an existing budget
-router.put('/:id', async (req: AuthRequest, res) => {
+// @access  Private (Financial Manager who created it, or Admin)
+router.put('/:id', authorizeFinancialManager, async (req: AuthRequest, res) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Not authorized' });
     }
@@ -115,19 +147,21 @@ router.put('/:id', async (req: AuthRequest, res) => {
 
         const isCreator = budgetToUpdate.userId === req.user!.id;
         const isAdmin = req.user!.role === UserRole.ADMIN;
-        if (!isCreator && !isAdmin) {
-            return res.status(403).json({ message: 'User not authorized to edit this budget' });
-        }
 
-        // Fix: Explicitly delete child (Items) then parent (Categories)
+        if (!isAdmin && !isCreator) {
+            return res.status(403).json({ message: 'User not authorized to edit this budget.' });
+        }
+        
+        const itemRepo = transactionalEntityManager.getRepository(Item);
+        const categoryRepo = transactionalEntityManager.getRepository(Category);
+
         for (const category of budgetToUpdate.categories) {
             if (category.items && category.items.length > 0) {
-                await transactionalEntityManager.getRepository(Item).remove(category.items);
+                await itemRepo.remove(category.items);
             }
         }
-        await transactionalEntityManager.getRepository(Category).remove(budgetToUpdate.categories);
+        await categoryRepo.remove(budgetToUpdate.categories);
 
-        // Re-process new data from the request body
         const { name, program, categories: newCategoriesData } = req.body;
         let totalAmount = 0;
         const processedCategories = newCategoriesData.map((catData: any) => {
@@ -165,6 +199,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 
 // @route   PATCH /api/budgets/:id/status
 // @desc    Update a budget's approval status
+// @access  Private (Program Manager or Admin)
 router.patch('/:id/status', authorizeProgramManager, async (req, res) => {
     try {
         const { status, comment } = req.body;
@@ -182,7 +217,7 @@ router.patch('/:id/status', authorizeProgramManager, async (req, res) => {
         }
         
         budget.status = status;
-        budget.statusComment = (status === BudgetStatus.APPROVED) ? "" : comment; // Clear comment only on approval
+        budget.statusComment = (status === BudgetStatus.APPROVED) ? "" : comment;
         
         const updatedBudget = await budgetRepo.save(budget);
         res.json(updatedBudget);
@@ -193,7 +228,8 @@ router.patch('/:id/status', authorizeProgramManager, async (req, res) => {
 });
 
 // @route   DELETE /api/budgets/:id
-// @desc    Delete a budget (Admin only)
+// @desc    Delete a budget
+// @access  Private (Admin only)
 router.delete('/:id', authorizeAdmin, async (req, res) => {
     try {
         const budgetRepo = getRepository(Budget);

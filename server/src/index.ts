@@ -33,15 +33,14 @@ const main = async () => {
 
     const app = express();
 
-    // --- 2. CONFIGURE AND USE CORS MIDDLEWARE ---
-    // This should come before your routes.
+  
     app.use(cors({
-        origin: 'http://localhost:3000', // Allow requests only from your frontend
-        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'], // Explicitly allow PATCH
-        allowedHeaders: ['Content-Type', 'Authorization'], // Allow these headers
+        origin: 'http://localhost:3000', 
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+        allowedHeaders: ['Content-Type', 'Authorization'], 
     }));
     
-    // This middleware must come after CORS
+   
     app.use(express.json());
 
     // --- API Routes ---

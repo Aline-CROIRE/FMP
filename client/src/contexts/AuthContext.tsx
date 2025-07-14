@@ -9,7 +9,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'program_manager' | 'finance_manager';
+  role: 'admin' | 'program_manager' | 'finance_manager'| 'viewer'; // Added 'viewer' role
 }
 
 interface AuthContextType {
