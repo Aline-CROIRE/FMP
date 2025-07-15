@@ -44,6 +44,9 @@ name!: string;
   @Column({ type: "timestamp", nullable: true })
   passwordResetExpires?: Date;
 
+     @Column({ type: "varchar", nullable: true }) // <-- NEW: Add this column
+    profilePictureUrl!: string;
+
   @CreateDateColumn()
   createdAt!: Date;
 
