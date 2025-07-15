@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PageContainer, Card, Input, Button, Logo, InputGroup, Label, FormWrapper } from '@/components/Styled';
-import { theme } from '@/styles/theme';
+import { lightTheme } from '@/styles/theme';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -52,7 +52,7 @@ export default function LoginPage() {
                         <Button type="submit" disabled={isLoading}>
                             {isLoading ? 'Signing In...' : 'Sign In'}
                         </Button>
-                        {error && <p style={{ color: theme.colors.redError, marginTop: '1rem', textAlign: 'center', fontSize: theme.fontSizes.sm }}>{error}</p>}
+                        {error && <p style={{ color: lightTheme.colors.redError, marginTop: '1rem', textAlign: 'center', fontSize: lightTheme.fontSizes.sm }}>{error}</p>}
                     </FormWrapper>
                 </form>
             </Card>
